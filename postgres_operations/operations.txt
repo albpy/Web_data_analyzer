@@ -1,0 +1,4 @@
+1. Adding column
+    ALTER TABLE ra_table  ADD column total_sku_count int default 0
+
+2. 

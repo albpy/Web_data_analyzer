@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Run Alembic migrations
+# alembic upgrade head
+
+# Start FastAPI application nohup uvicorn main:api --host 0.0.0.0 --port 5000
+
+uvicorn main:api --host 0.0.0.0 --port 5000 --reload
+
+#--data ''

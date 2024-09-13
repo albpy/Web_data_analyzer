@@ -1,0 +1,28 @@
+Polars columns
++-----------------------+--------+
+|        Columns        |        |
++-----------------------+--------+
+| "Store"               | String |
+| "Region"              | String |
+| "Channel"             | String |
+| "Budget_Year"         | String |
+| "budget_quarter"      | String |
+| "budget_month"        | String |
+| "budget_week"         | String |
+| "budget_day"          | Int8   |
+| "Budget_date"         | String |
+| "historical_year"     | Int64  |
+| "history_quarter"     | String |
+| "history_month"       | String |
+| "history_week"        | String |
+| "history_day"         | String |
+| "INVOICEDATE"         | String |
+| "Family"              | String |
+| "SubFamily"           | String |
+| "Supplier"            | String |
+| "Category"            | String |
+| "DOM_COMM"            | String |
+| "SubCategory"         | String |
+| "ExtendedSubCategory" | String |
+| "SubCategorySupplier" | String |
++-----------------------+--------+

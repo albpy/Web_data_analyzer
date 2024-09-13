@@ -1,0 +1,944 @@
+import os
+import json
+from datetime import datetime
+import csv
+import sys
+import pandas as pd
+
+# import redis.asyncio as redis
+import asyncpg
+from fastapi import FastAPI, WebSocket, APIRouter, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
+from fastapi_limiter import FastAPILimiter
+from decimal import Decimal
+from core.middlewares.security import SecurityMiddleware
+from routes.admin import router as admin_aouter
+from routes.ASR import router as asr_router
+from routes.authentication import router as auth_router
+from starlette.websockets import WebSocketDisconnect
+
+# from routes.budgetPlan import budget as budget_plan_router
+from routes.data_master import router as data_master_router
+from core.database import get_db
+from sqlalchemy.orm import Session
+
+api = FastAPI(
+    debug=True,
+    title="BMAPS API",
+    summary="API for backend services for BMAPS",
+    contact={
+        "name": "Electric-Grasshopper",
+        "url": "https://github.com/Electric-Grasshopper",
+        "email": "mohit.gupta@rebosolution.com",
+    },
+    version="0.1.0",
+)
+
+# Add the api routes
+api.include_router(auth_router)
+api.include_router(asr_router)
+api.include_router(data_master_router)
+api.include_router(admin_aouter)
+# api.include_router(budget_plan_router)
+
+# Add the CORS middleware
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Add the security middleware
+# api.add_middleware(SecurityMiddleware)
+
+# @api.on_event("startup")
+# async def startup():
+#     redis_obj = redis.StrictRedis(
+#         host=os.getenv("REDIS_HOST"),
+#         password=os.getenv("REDIS_PASSWORD"),
+#         encoding="utf-8",
+#         decode_responses=True
+#     )
+#     await FastAPILimiter.init(redis_obj)
+
+security = HTTPBearer()
+
+
+# Protected route that requires authentication
+@api.get("/")
+async def protected_base_route():
+    return {"message": "Hi my friend, how are you?"}
+
+
+optionplan = APIRouter(prefix="/optionplan")
+session = Session()
+
+
+from decimal import Decimal
+
+
+async def execute_stored_procedure(
+    history_date_range,
+    forecast_date_range,
+    sales_channel,
+    product_family,
+    sub_families,
+    suppliers,
+    category,
+    sub_category,
+    sku,
+    top_items,
+    store_class,
+):
+
+    # Convert date strings to Python date objects
+    history_date_from = datetime.strptime(
+        history_date_range.get("fro", ""), "%Y-%m-%d"
+    ).date()
+    history_date_to = datetime.strptime(
+        history_date_range.get("to", ""), "%Y-%m-%d"
+    ).date()
+    forecast_date_from = datetime.strptime(
+        forecast_date_range.get("fro", ""), "%Y-%m-%d"
+    ).date()
+    forecast_date_to = datetime.strptime(
+        forecast_date_range.get("to", ""), "%Y-%m-%d"
+    ).date()
+
+    conn = await asyncpg.connect(
+        user="mohit",
+        password="password",
+        database="bmaps",
+        host="43.204.167.201",
+        port=5433,
+    )
+
+    try:
+        query = """
+            CALL get_sp_op(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+            )
+        """
+
+        # Execute the stored procedure with parameters
+        await conn.execute(
+            query,
+            history_date_from,
+            history_date_to,
+            forecast_date_from,
+            forecast_date_to,
+            sales_channel,
+            product_family,
+            sub_families,
+            suppliers,
+            category,
+            sub_category,
+            sku,
+            top_items,
+            store_class,
+        )
+
+        # Fetch results from temp_result table
+        records = await conn.fetch(
+            "SELECT channel as channel, SUM(budget) as budget, SUM(budget_mix) as budget_mix, SUM(budget_qty) as budget_qty, SUM(budget_qty_mix) as budget_qty_mix, SUM(salesact_fcst) as salesact_fcst, SUM(salesact_fcst_mix) as salesact_fcst_mix, SUM(sales_ly) as sales_ly, SUM(sales_ly_mix) as sales_ly_mix,"
+            "SUM(options_budget) as options_budget, SUM(options_saleact_fcst) as options_saleact_fcst, SUM(options_ly) as options_ly, SUM(total_area) as total_area, SUM(total_area_percent) as total_area_percent, SUM(selling_area) as selling_area, SUM(selling_area_percent) as selling_area_percent,"
+            "SUM(number_of_equipment) as number_of_equipment, SUM(area_for_equipment) as area_for_equipment, SUM(linear_meter) as linear_meter, SUM(linear_factor) as linear_factor, SUM(linear) as linear, SUM(linear_percent) as linear_percent, SUM(option_per_linear) as option_per_linear,"
+            "SUM(option_total) as option_total, SUM(option_mix) as option_mix, SUM(display_options) as display_options, SUM(double_display) as double_display, SUM(pos_display) as pos_display, SUM(option_at_one_point) as option_at_one_point,"
+            "SUM(final_options_with_ot_less_dd_and_pos_display) as final_options_with_ot_less_dd_and_pos_display, SUM(option_turn) as option_turn, SUM(rate_of_sales_based_on_budget) as rate_of_sales_based_on_budget, SUM(rate_of_sale_cy) as rate_of_sale_cy,"
+            "SUM(rate_of_sale_ly) as rate_of_sale_ly, SUM(rate_of_sale_lly) as rate_of_sale_lly, SUM(initial_allocation_qty) as initial_allocation_qty, SUM(value_to_fill) as value_to_fill, SUM(value_to_fill_percent) as value_to_fill_percent, SUM(total_units) as total_units, SUM(git) as git, SUM(soh) as soh,"
+            "SUM(net_selling_by_linear) as net_selling_by_linear, SUM(avg_units_by_net_selling_space) as avg_units_by_net_selling_space, SUM(initial_price) as initial_price, SUM(average_cover_by_base) as average_cover_by_base, SUM(budget_margin_percent) as budget_margin_percent, "
+            "SUM(actfcst_margin_percent) as actfcst_margin_percent, SUM(ly_margin_percent) as ly_margin_percent, SUM(overall_selthru_percent) as overall_selthru_percent, SUM(full_price_selthru_percent) as full_price_selthru_percent, SUM(full_price_selthru_mix_percent) as full_price_selthru_mix_percent,"
+            "SUM(space_mix_percent) as space_mix_percent, SUM(stock_mix_percent) as stock_mix_percent, SUM(terminal_stock_mix_percent) as terminal_stock_mix_percent, SUM(markdown_mix_percent) as markdown_mix_percent, SUM(type_of_stock) as type_of_stock, "
+            "SUM(ly_overall_selthru_mix_percent) as ly_overall_selthru_mix_percent, SUM(ly_fp_selthru_percent) as ly_fp_selthru_percent, SUM(ly_fp_selthru_mix_percent) as ly_fp_selthru_mix_percent"
+            " FROM op_result group by channel"
+        )
+       
+        # Convert asyncpg.Record objects to dictionaries and replace None values with 0
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == "budget_margin_percent" and value == float("inf"):
+                    modified_record[key] = 0
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        
+        result_json = json.dumps(modified_records)
+        
+        return result_json
+    finally:
+        await conn.close()
+
+
+async def execute_stored_procedure_family_level(channels):
+    conn = await asyncpg.connect(
+        user="mohit",
+        password="password",
+        database="bmaps",
+        host="43.204.167.201",
+        port=5433,
+    )
+    try:
+        query = "CALL get_sp_op_family_level($1)"
+        await conn.execute(query, channels)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_family"
+        records = await conn.fetch(query_select)
+
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == "budget_margin_percent" and value == float("inf"):
+                    modified_record[key] = 0
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        # Convert each modified record to a dictionary
+        result_json = json.dumps(modified_records)
+
+        # Process and return the data as needed
+        return result_json
+    finally:
+        await conn.close()
+
+
+async def execute_stored_procedure_subfamily_level(channels, family_name):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_subfamily_level($1, $2)"
+        await conn.execute(query, channels, family_name)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_subfamily"
+        records = await conn.fetch(query_select)
+        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        
+        result_json = json.dumps(modified_records)
+       
+        
+        return result_json
+    finally:
+        await conn.close()
+
+
+async def execute_stored_procedure_category_level(channels, family_name, subfamily_name):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_category_level($1, $2, $3)"
+        await conn.execute(query, channels, family_name, subfamily_name)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_category"
+        records = await conn.fetch(query_select)
+        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)        
+        result_json = json.dumps(modified_records)
+       
+        
+        return result_json
+    finally:
+        await conn.close()
+
+
+async def execute_stored_procedure_subcategory_level(channels, family_name, subfamily_name, category):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_subcategory_level($1, $2, $3, $4)"
+        await conn.execute(query, channels, family_name, subfamily_name, category)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_subcategory"
+        records = await conn.fetch(query_select)        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)        
+        result_json = json.dumps(modified_records)
+        return result_json
+    finally:
+        await conn.close()
+
+async def execute_stored_procedure_extendedsubcat_level(channels, family_name, subfamily_name, category, sub_category):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_extendedsubcat_level($1, $2, $3, $4, $5)"
+        await conn.execute(query, channels, family_name, subfamily_name, category, sub_category)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_extendedsubcat"
+        records = await conn.fetch(query_select)
+        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        
+        result_json = json.dumps(modified_records)
+       
+        
+        return result_json
+    finally:
+        await conn.close()
+
+async def execute_stored_procedure_supplier_level(channels, family_name, subfamily_name, category, sub_category, extended_sub_categorys):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_supplier_level($1, $2, $3, $4, $5, $6)"
+        await conn.execute(query, channels, family_name, subfamily_name, category, sub_category, extended_sub_categorys)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_supplier"
+        records = await conn.fetch(query_select)
+        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        
+        result_json = json.dumps(modified_records)
+       
+        
+        return result_json
+    finally:
+        await conn.close()
+
+
+async def execute_stored_procedure_sku_level(channels, family_name, subfamily_name, category, sub_category, extended_sub_categorys, suppliers):
+    conn = await asyncpg.connect(
+        user="mohit", password="password", database="bmaps", host="43.204.167.201", port=5433
+    )
+    try:
+        query = "CALL get_sp_op_sku_level($1, $2, $3, $4, $5, $6, $7)"
+        await conn.execute(query, channels, family_name, subfamily_name, category, sub_category, extended_sub_categorys, suppliers)
+        # After executing the stored procedure, you can execute your SELECT query
+        query_select = "SELECT * FROM op_result_sku"
+        records = await conn.fetch(query_select)
+        
+        # Convert records to a JSON serializable format
+        modified_records = []
+        for record in records:
+            modified_record = {}
+            for key, value in record.items():
+                if isinstance(value, Decimal):
+                    modified_record[key] = float(value)  # Convert Decimal to float
+                elif value is None:
+                    modified_record[key] = 0
+                elif key == 'budget_margin_percent' and value == float('inf'):
+                    modified_record[key] = 0    
+                else:
+                    modified_record[key] = value
+            modified_records.append(modified_record)
+
+        
+        result_json = json.dumps(modified_records)
+       
+        
+        return result_json
+    finally:
+        await conn.close()
+
+@optionplan.websocket("/get_data_ws")
+async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    await websocket.accept()
+    editable = [
+        "number_of_equipment",
+        "area_for_equipment",
+        "linear_factor",
+        "linear",
+        "option_per_linear",
+        "double_display",
+        "pos_display",
+    ]
+    percent_col = [
+        "budget_mix",
+        "budget_qty_mix",
+        "salesact_fcst_mix",
+        "sales_ly_mix",
+        "total_area_percent",
+        "selling_area_percent",
+        "linear_percent",
+        "option_mix",
+        "initial_allocation_qty_percent",
+        "value_to_fill_percent",
+        "budget_margin_percent",
+        "actfcst_margin_percent",
+        "ly_margin_percent",
+        "overall_selthru_percent",
+        "overall_selthru_mix_percent",
+        "full_price_selthru_percent",
+        "full_price_selthru_mix_percent",
+        "space_mix_percent",
+        "stock_mix_percent",
+        "terminal_stock_mix_percent",
+        "ly_overall_selthru_mix_percent",
+        "ly_fp_selthru_percent",
+        "ly_fp_selthru_mix_percent",
+    ]
+    opAllView = [
+                "channel",
+                "family_name",
+                "sub_family",
+                "category",
+                "sub_category",
+                "supplier",
+                "extended_sub_category",
+                "sku",
+                "budget",
+                "budget_mix",
+                "budget_qty",
+                "budget_qty_mix",
+                "salesact_fcst",
+                "salesact_fcst_mix",
+                "sales_ly",
+                "sales_ly_mix",
+                "options_budget",
+                "options_saleact_fcst",
+                "options_ly",
+                "total_area",
+                "total_area_percent",
+                "selling_area",
+                "selling_area_percent",
+                "equipment_type",
+                "number_of_equipment",
+                "area_for_equipment",
+                "linear_meter",
+                "linear_factor",
+                "linear",
+                "linear_percent",
+                "option_per_linear",
+                "option_total",
+                "option_mix",
+                "display_options",
+                "double_display",
+                "pos_display",
+                "option_at_one_point",
+                "final_options_with_ot_less_dd_and_pos_display",
+                "option_turn",
+                "rate_of_sales_based_on_budget",
+                "rate_of_sale_cy",
+                "rate_of_sale_ly",
+                "rate_of_sale_lly",
+                "initial_allocation_qty",
+                "initial_allocation_qty_percent",
+                "value_to_fill",
+                "value_to_fill_percent",
+                "total_units",
+                "git",
+                "soh",
+                "git_option",
+                "soh_option",
+                "size_viability_ratio",
+                "occupancy_ratio",
+                "fulfilled_ratio",
+                "net_selling_by_space_measurement",
+                "net_selling_by_linear",
+                "avg_units_by_net_selling_space",
+                "initial_price",
+                "average_cover_by_base",
+                "budget_margin_percent",
+                "actfcst_margin_percent",
+                "ly_margin_percent",
+                "overall_selthru_percent",
+                "overall_selthru_mix_percent",
+                "full_price_selthru_percent",
+                "full_price_selthru_mix_percent",
+                "space_mix_percent",
+                "stock_mix_percent",
+                "terminal_stock_mix_percent",
+                "markdown_mix_percent",
+                "type_of_stock",
+                "ly_overall_selthru_mix_percent",
+                "ly_fp_selthru_percent",
+                "ly_fp_selthru_mix_percent",
+            ]
+
+    opCurrentView = [
+                "channel",
+                "family_name",
+                "sub_family",
+                "category",
+                "sub_category",
+                "supplier",
+                "extended_sub_category",
+                "sku",
+                "budget",
+                "budget_mix",
+                "budget_qty",
+                "budget_qty_mix",
+                "salesact_fcst",
+                "salesact_fcst_mix",
+                "options_budget",
+                "options_saleact_fcst",
+                "total_area",
+                "total_area_percent",
+                "selling_area",
+                "selling_area_percent",
+                "equipment_type",
+                "number_of_equipment",
+                "area_for_equipment",
+                "linear_meter",
+                "linear_factor",
+                "linear",
+                "linear_percent",
+                "option_per_linear",
+                "option_total",
+                "option_mix",
+                "display_options",
+                "double_display",
+                "pos_display",
+                "option_at_one_point",
+                "final_options_with_ot_less_dd_and_pos_display",
+                "option_turn",
+                "rate_of_sales_based_on_budget",
+                "rate_of_sale_cy",
+                "initial_allocation_qty",
+                "initial_allocation_qty_percent",
+                "value_to_fill",
+                "value_to_fill_percent",
+                "total_units",
+                "git",
+                "soh",
+                "git_option",
+                "soh_option",
+                "size_viability_ratio",
+                "occupancy_ratio",
+                "fulfilled_ratio",
+                "net_selling_by_space_measurement",
+                "net_selling_by_linear",
+                "avg_units_by_net_selling_space",
+                "initial_price",
+                "average_cover_by_base",
+                "budget_margin_percent",
+                "actfcst_margin_percent",
+                "overall_selthru_percent",
+                "overall_selthru_mix_percent",
+                "full_price_selthru_percent",
+                "full_price_selthru_mix_percent",
+                "space_mix_percent",
+                "stock_mix_percent",
+                "terminal_stock_mix_percent",
+                "markdown_mix_percent",
+                "type_of_stock",
+                "ly_overall_selthru_mix_percent",
+            ]
+    percent_View = [
+                    "channel",
+                    "family_name",
+                    "sub_family",
+                    "category",
+                    "sub_category",
+                    "supplier",
+                    "extended_sub_category",
+                    "sku",
+                    "budget_mix",
+                    "budget_qty_mix",
+                    "salesact_fcst_mix",
+                    "sales_ly_mix",
+                    "total_area_percent",
+                    "selling_area_percent",
+                    "linear_percent",
+                    "option_mix",
+                    "initial_allocation_qty_percent",
+                    "value_to_fill_percent",
+                    "budget_margin_percent",
+                    "actfcst_margin_percent",
+                    "ly_margin_percent",
+                    "overall_selthru_percent",
+                    "overall_selthru_mix_percent",
+                    "full_price_selthru_percent",
+                    "full_price_selthru_mix_percent",
+                    "space_mix_percent",
+                    "stock_mix_percent",
+                    "terminal_stock_mix_percent",
+                    "ly_overall_selthru_mix_percent",
+                    "ly_fp_selthru_percent",
+                    "ly_fp_selthru_mix_percent",
+                ]
+    opStoreOccupancy = [
+                    "channel",
+                    "family_name",
+                    "sub_family",
+                    "category",
+                    "sub_category",
+                    "supplier",
+                    "extended_sub_category",
+                    "sku",
+                    "options_ly",
+                    "total_area",
+                    "total_area_percent",
+                    "selling_area",
+                    "selling_area_percent",
+                    "equipment_type",
+                    "number_of_equipment",
+                    "area_for_equipment",
+                    "linear_meter",
+                    "linear_factor",
+                    "linear",
+                    "linear_percent",
+                    "option_per_linear",
+                    "option_total",
+                    "option_mix",
+                    "display_options",
+                    "double_display",
+                    "pos_display",
+                    "option_at_one_point",
+                    "final_options_with_ot_less_dd_and_pos_display",
+                    "option_turn",
+                    "rate_of_sales_based_on_budget",
+                    "rate_of_sale_cy",
+                    "rate_of_sale_ly",
+                    "rate_of_sale_lly",
+                    "initial_allocation_qty",
+                    "initial_allocation_qty_percent",
+                    "value_to_fill",
+                    "value_to_fill_percent",
+                    "total_units",
+                    "git",
+                    "soh",
+                    "git_option",
+                    "soh_option",
+                    "size_viability_ratio",
+                    "occupancy_ratio",
+                    "fulfilled_ratio",
+                    "net_selling_by_space_measurement",
+                    "net_selling_by_linear",
+                    "initial_price",
+                    "ly_margin_percent",
+                    "overall_selthru_percent",
+                    "overall_selthru_mix_percent",
+                    "full_price_selthru_percent",
+                    "full_price_selthru_mix_percent",
+                    "space_mix_percent",
+                    "stock_mix_percent",
+                    "terminal_stock_mix_percent",
+                    "markdown_mix_percent",
+                    "type_of_stock",
+                    "ly_overall_selthru_mix_percent",
+                    "ly_fp_selthru_percent",
+                    "ly_fp_selthru_mix_percent",
+                ]
+
+    opAllStoreView = [
+                    "channel",
+                    "family_name",
+                    "sub_family",
+                    "category",
+                    "sub_category",
+                    "supplier",
+                    "extended_sub_category",
+                    "store_code",
+                    "store_name",
+                    "budget",
+                    "budget_mix",
+                    "budget_qty",
+                    "budget_qty_mix",
+                    "salesact_fcst",
+                    "salesact_fcst_mix",
+                    "options_budget",
+                    "options_saleact_fcst",
+                    "options_ly",
+                    "total_area",
+                    "total_area_percent",
+                    "selling_area",
+                    "selling_area_percent",
+                    "equipment_type",
+                    "number_of_equipment",
+                    "area_for_equipment",
+                    "linear_meter",
+                    "linear_factor",
+                    "linear",
+                    "linear_percent",
+                    "option_per_linear",
+                    "option_total",
+                    "option_mix",
+                    "display_options",
+                    "double_display",
+                    "pos_display",
+                    "option_at_one_point",
+                    "final_options_with_ot_less_dd_and_pos_display",
+                    "option_turn",
+                    "rate_of_sales_based_on_budget",
+                    "rate_of_sale_cy",
+                    "rate_of_sale_ly",
+                    "rate_of_sale_lly",
+                    "initial_allocation_qty",
+                    "initial_allocation_qty_percent",
+                    "value_to_fill",
+                    "value_to_fill_percent",
+                    "total_units",
+                    "git",
+                    "soh",
+                    "git_option",
+                    "soh_option",
+                    "size_viability_ratio",
+                    "occupancy_ratio",
+                    "fulfilled_ratio",
+                    "net_selling_by_space_measurement",
+                    "net_selling_by_linear",
+                    "avg_units_by_net_selling_space",
+                    "initial_price",
+                    "average_cover_by_base",
+                    "budget_margin_percent",
+                    "actfcst_margin_percent",
+                    "ly_margin_percent",
+                    "overall_selthru_percent",
+                    "overall_selthru_mix_percent",
+                    "full_price_selthru_percent",
+                    "full_price_selthru_mix_percent",
+                    "space_mix_percent",
+                    "stock_mix_percent",
+                    "terminal_stock_mix_percent",
+                    "markdown_mix_percent",
+                    "type_of_stock",
+                    "ly_overall_selthru_mix_percent",
+                    "ly_fp_selthru_percent",
+                    "ly_fp_selthru_mix_percent",
+                ]
+
+    tabs = {
+            "opAllView": opAllView,
+            "opCurrentView": opCurrentView,
+            "%View": percent_View,
+            "opStoreOccupancy": opStoreOccupancy,
+            "opAllStoreView": opAllStoreView,
+            }
+    sel_all_kpi = ""
+    data_json_str = {}
+    while True:
+        try:
+            data = await websocket.receive_json()
+            
+            if data.get("fetch_from_db", False):
+    
+                
+                history_date_range = data.get("history_date_range", {})
+                forecast_date_range = data.get("forecast_date_range", {})
+                sales_channel = data.get("sales_channel", [])
+                product_family = data.get("product_family", [])
+                sub_families = data.get("sub_families", [])
+                suppliers = data.get("suppliers", [])
+                category = data.get("category", [])
+                sub_category = data.get("sub_category", [])
+                sku = data.get("sku", [])
+                top_items = data.get("top_items", [])
+                store_class = data.get("store_class", [])
+                result_json = await execute_stored_procedure(
+                    history_date_range,
+                    forecast_date_range,
+                    sales_channel,
+                    product_family,
+                    sub_families,
+                    suppliers,
+                    category,
+                    sub_category,
+                    sku,
+                    top_items,
+                    store_class,
+                )
+                size = len(result_json)
+                result_dict = json.loads(result_json)
+                result_df = pd.DataFrame(result_dict)
+                data_json = {
+                    "data": result_df.to_dict(orient="split")["data"][:10],
+                    "columns": result_df.to_dict(orient="split")["columns"],
+                    "select_all_kpi": sel_all_kpi,
+                    "percent_col": percent_col,
+                    "editable_cols": editable,
+                    "tabs": tabs,
+                    "items": size,
+                    "total": result_df.shape[0],
+                }
+                data_json_str = json.dumps(data_json)
+                await websocket.send_text(data_json_str)
+
+
+
+            if data.get("fetch_from_db", True):
+    
+                
+                history_date_range = data.get("history_date_range", {})
+                forecast_date_range = data.get("forecast_date_range", {})
+                sales_channel = data.get("sales_channel", [])
+                product_family = data.get("product_family", [])
+                sub_families = data.get("sub_families", [])
+                suppliers = data.get("suppliers", [])
+                category = data.get("category", [])
+                sub_category = data.get("sub_category", [])
+                sku = data.get("sku", [])
+                top_items = data.get("top_items", [])
+                store_class = data.get("store_class", [])
+                result_json = await execute_stored_procedure(
+                    history_date_range,
+                    forecast_date_range,
+                    sales_channel,
+                    product_family,
+                    sub_families,
+                    suppliers,
+                    category,
+                    sub_category,
+                    sku,
+                    top_items,
+                    store_class,
+                )
+                size = len(result_json)
+                result_dict = json.loads(result_json)
+                result_df = pd.DataFrame(result_dict)
+                data_json = {
+                    "data": result_df.to_dict(orient="split")["data"][:10],
+                    "columns": result_df.to_dict(orient="split")["columns"],
+                    "select_all_kpi": sel_all_kpi,
+                    "percent_col": percent_col,
+                    "editable_cols": editable,
+                    "tabs": tabs,
+                    "items": size,
+                    "total": result_df.shape[0],
+                }
+                data_json_str = json.dumps(data_json)
+                await websocket.send_text(data_json_str)
+
+
+
+
+            if not data.get("fetch_from_db", False) and data.get("expand", {}).get(
+                "status", False
+            ):
+                history_date_range = data.get("history_date_range", {})
+                forecast_date_range = data.get("forecast_date_range", {})
+                # sales_channel = data.get("sales_channel", [])
+                # product_family = data.get("product_family", [])
+                # sub_families = data.get("sub_families", [])
+                # suppliers = data.get("suppliers", [])
+                # category = data.get("category", [])
+                # sub_category = data.get("sub_category", [])
+                # sku = data.get("sku", [])
+                # top_items = data.get("top_items", [])
+                # store_class = data.get("store_class", [])
+                expand_row = data.get("expand", {}).get("row", {})
+                channels = [expand_row.get("channel", "")]
+                family_name = [expand_row.get("family_name")]
+                subfamily_name = [expand_row.get("sub_family")]
+                category = [expand_row.get("category")]
+                sub_category = [expand_row.get("sub_category")]
+                extended_sub_category = [expand_row.get("extended_sub_category")]
+                supplier = [expand_row.get("supplier")]
+                result_records = {}
+
+                if channels and (not any(family_name) or all(name is None for name in family_name)) and (not any(subfamily_name) or all(name is None for name in subfamily_name)) and (not any(category) or all(name is None for name in category)) and (not any(sub_category) or all(name is None for name in sub_category)) and (not any(extended_sub_category) or all(name is None for name in extended_sub_category)) and (not any(supplier) or all(name is None for name in supplier)):
+                    result_records = await execute_stored_procedure_family_level(channels)
+                elif channels and any(family_name) and (not any(subfamily_name) or all(name is None for name in subfamily_name)) and (not any(category) or all(name is None for name in category)) and (not any(sub_category) or all(name is None for name in sub_category)) and (not any(extended_sub_category) or all(name is None for name in extended_sub_category)) and (not any(supplier) or all(name is None for name in supplier)):
+                    result_records = await execute_stored_procedure_subfamily_level(channels, family_name)
+                elif channels and any(family_name) and any(subfamily_name) and  (not any(category) or all(name is None for name in category)) and (not any(sub_category) or all(name is None for name in sub_category)) and (not any(extended_sub_category) or all(name is None for name in extended_sub_category)) and (not any(supplier) or all(name is None for name in supplier)):
+                    result_records = await execute_stored_procedure_category_level(channels, family_name, subfamily_name)
+                elif channels and any(family_name) and any(subfamily_name) and any(category) and (not any(sub_category) or all(name is None for name in sub_category)) and (not any(extended_sub_category) or all(name is None for name in extended_sub_category)) and (not any(supplier) or all(name is None for name in supplier)) :                    
+                    result_records = await execute_stored_procedure_subcategory_level(channels, family_name, subfamily_name, category)
+                elif channels and any(family_name) and any(subfamily_name) and any(category) and any(sub_category) and (not any(extended_sub_category) or all(name is None for name in extended_sub_category)) and (not any(supplier) or all(name is None for name in supplier)):                    
+                    result_records = await execute_stored_procedure_extendedsubcat_level(channels, family_name, subfamily_name, category, sub_category)
+                elif channels and any(family_name) and any(subfamily_name) and any(category) and any(sub_category) and any(extended_sub_category) and (not any(supplier) or all(name is None for name in supplier)):                    
+                    result_records = await execute_stored_procedure_supplier_level(channels, family_name, subfamily_name, category, sub_category, extended_sub_category)
+                elif channels and any(family_name) and any(subfamily_name) and any(category) and any(sub_category) and any(extended_sub_category) and any(supplier):                    
+                    result_records = await execute_stored_procedure_sku_level(channels, family_name, subfamily_name, category, sub_category, extended_sub_category, supplier)
+                print(result_records)
+                size = len(result_records)
+                result_dict = json.loads(result_records)
+                result_df = pd.DataFrame(result_dict)
+
+                data_json = {
+                    "data": result_df.to_dict(orient="split")["data"][:10],
+                    "columns": result_df.to_dict(orient="split")["columns"],
+                    "select_all_kpi": sel_all_kpi,
+                    "percent_col": percent_col,
+                    "editable_cols": editable,
+                    "tabs": tabs,
+                    "items": size,
+                    "total": result_df.shape[0],
+                }
+                data_json_str = json.dumps(data_json)
+                await websocket.send_text(data_json_str)
+
+                
+        except WebSocketDisconnect:
+            break
+
+
+api.include_router(optionplan)

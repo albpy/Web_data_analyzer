@@ -1,0 +1,22 @@
+function name				procedure name					operation
+
+
+execute_stored_procedure 		-  get_sp_otb					base_data_calculations
+
+execute_stored_proc_sku_wise_calc 	-  get_sp_otb_itemwise_calculations		item idwise calculations
+
+CallSubfilterProcedure 			-  get_sp_otb_get_filter			This will get distinct the subfilter
+ 
+get_apply_secondary_filters 		-  get_sp_otb_commit_secondary_filter		this will apply secondary filters
+
+getSubfilterData			-  Direct query					get the result of the main aggregation from "otb_min_filter"
+
+mainClusterCaller() 			-  get_sp_otb_main_aggregation			apply main group by 
+
+execute_stored_proc_final_data_output	-  get_sp_otb_output_data_calc			calculations on final data
+
+getmaindata()				-  Direct query					get the result of the main aggregation from "otb_main_data"
+
+getData					-  Direct query					get data from "item_counter" table
+
+editable_col_calculations		-  get_sp_otb_editable_columns_operations()	editable column operations

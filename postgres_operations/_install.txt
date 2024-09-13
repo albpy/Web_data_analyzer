@@ -1,0 +1,77 @@
+****install****
+
+sudo apt update
+sudo apt install postgresql
+
+****Check****
+
+The installation process created an operating system user called postgres(Default Administrative User) 
+to match the postgres database administrative account. To log into PostgreSQL with the psql client, 
+use sudo to run the command as the postgres user:
+
+sudo -u postgres psql
+\quit
+
+sudo -u -: tells sudo to run cammand as a specific user
+postgres -: Default Administrative User of PostgreSQL
+pasql -: start postgresql interactive terminal
+
+****Create a Local Database****
+1. service postgresql start
+2. psql -U postgres -: Connect to psql as -U(user) postgres, Needs peer authentication.
+    
+    ****PEER AUTHENTICATION****
+    PostgreSQL attempts to match the OS user with the PostgreSQL user. For instance, if you're logged in as the 
+    postgres OS user, PostgreSQL expects you to be connecting as the postgres PostgreSQL user.
+    
+    No Password Required: If the OS user matches the PostgreSQL user, no password is required. 
+    PostgreSQL assumes that if the OS user has the necessary permissions to connect to PostgreSQL, 
+    they should be allowed to access the database without further authentication.
+
+    The method for peer authentication is specified in PostgreSQL's configuration file pg_hba.conf. 
+    This file controls how clients are authenticated and is usually located in the PostgreSQL data 
+    directory (e.g., /etc/postgresql/<version>/main/pg_hba.conf).
+    **** ****  ****  **** ****
+    OR
+    
+    sudo -u postgres psql
+3. CREATE DATABASE DWA;
+
+    ****Warn****
+    DETAIL:  The template database was created using collation version 2.38, but the operating system provides 
+    version 2.39.
+    HINT:  Rebuild all objects in the template database that use the default collation and run ALTER DATABASE 
+    template1 REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+    ****info****
+    Collation version refers to the specific version of the collation rules used by the system to sort and compare 
+    textual data. These versions can differ based on the operating system's libraries and the database system's version.
+
+    Databases like PostgreSQL rely on operating system libraries for collation rules. For instance, Linux systems 
+    often use the GNU libc library, which includes collation data.
+    The version of these libraries (e.g., glibc on Linux) affects how text is sorted and compared.
+
+    -> ALTER DATABASE template1 REFRESH COLLATION VERSION;
+        ****info****
+            ALTER DATABASE: used to make changes to the template1 database.
+
+            template1: special database in PostgreSQL that serves as the default template for creating new databases. 
+                        When a new database is created, it is typically based on the template1 database, 
+                        so any changes to template1 affect all newly created databases.
+
+            REFRESH COLLATION VERSION: It instructs PostgreSQL to update the collation version information.
+
+4. Change peer authentication(peer) to password(md5) in /etc/postgresql/<version>/main/pg_hba.conf's "local" is for Unix domain socket connections only
+    
+    sudo systemctl reload postgresql
+    sudo -u postgres psqlpg_lsclusters
+
+    ALTER USER postgres WITH PASSWORD 'admin'; 
+    CREATE DATABASE webdata_Analyzer OWNER  postgres;
+    GRANT ALL PRIVILEGES ON DATABASE webdata_analyzer TO postgres;
+
+    **** If fails ****
+    sudo -u postgres psql -c "\l" -> check the available database
+
+    psql -U postgres -d webdata_analyzer -h localhost -W 
+        -W(when prompted password is same as postgres password)
+

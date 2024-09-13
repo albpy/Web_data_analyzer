@@ -1,0 +1,15 @@
+1.get column number of item_master:
+  
+    ****get column number****
+        SELECT COUNT(*) AS column_count
+        FROM information_schema.columns
+        WHERE table_name = 'item_master';
+    ****get column name****
+        SELECT  column_name
+        FROM information_schema.columns
+        WHERE table_name = 'item_master';
+    ****get column data type****
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_name = 'item_master';
+2. 

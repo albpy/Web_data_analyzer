@@ -1,0 +1,12 @@
+	CALL public.get_sp_otb_commit_drilldown(
+		'item_counter',
+		ARRAY['Channel'],
+		ARRAY['final_price', 'act_forecast_vs_budget_percent', 'SalesActualsByForecast', 'proposed_sellthru_percent', 'retail_value_including_markdown', 'budget_gross_margin_percent', 'Logistic%', 'adjusted_budget_gross_margin_percent', 'MarkdownValue', 'markdown_percent', 'DisplayItemValue'],
+		ARRAY['budget_amount', 'budget_cost', 'deficit', 'Original_BudgetAmount', 'budget_percent', 'relative_budget_percent', 'History_Net_Sales', 'budget_qty', 'ACT_FCT', 'Original_BudgetCostofGoods', 'PO', 'COSTPRICE', 'Historical_Gross_Margin', 'sales_actual', 'stock_on_hand_qty', 'StockatCostPrice', 'net_sales_ly', 'net_sales_lly', 'gross_sales_ly', 'initial_average_retail_price', 'total_sku_count', 'ly_customer_disc', 'SupplyCost', 'SALESQTY', 'DisplayItemQty', 'COR_EOLStock_value', 'Budget_Qty_Perc', 'budget_qty_act_fct_percent', 'budget_vs_py_qty_percent', 'budget_vs_ppy_qty_percent', 'QTY_Buy_By_SKU', 'total_sku_count_ty', 'total_sku_count_lly', 'total_sku_count_ly', 'quantity_mix_percent', 'quantity_act_forecast', 'quantity_act_forecast_vs_budget_percent', 'sold_qty_ly', 'quantity_act_forecast_vs_ly_percent', 'quantity_act_or_forecast_per_sku', 'quantity_act_forecast_vs_ppy_percent', 'budget_cost_percent', 'budget_vs_act_forecast_cost_percent', 'cost_budget_per_sku', 'BudgetCostofGoods', 'budget_vs_py_cost_percent', 'budget_vs_ppy_cost_percent', 'cost_mix_percent', 'cost_actuals', 'cost_of_goods_ly', 'cost_act_forecast', 'cost_act_forecast_vs_budget_perc', 'cost_act_forecast_vs_ly_percent', 'cost_act_forecast_vs_ppy_percent', 'cost_act_or_forecast_per_sku', 'budget_margin_percent', 'budget_margin_mix_percent', 'budget_vs_act_forecast_margin_percent', 'margin_actuals', 'margin_act_forecast', 'units_per_sku_total', 'units_per_sku_lly', 'unit_buy_by_sku_total', 'unit_buy_by_sku_ly', 'unit_buy_by_sku_lly', 'initial_average_retail_price_ly', 'initial_average_retail_price_lly', 'budget_per_sku', 'budget_qty_ty', 'supply_retail_value', 'stock_cost_ly', 'gross_sales'], 
+		ARRAY['new_budget_mix', 'revised_budget_amount'],
+		ARRAY['Check_box'],
+		ARRAY[]::text[],
+		ARRAY[]::text[],
+		'coefficient_score',
+		'coefficient_score_mix_percent'
+	)

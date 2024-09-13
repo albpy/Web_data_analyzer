@@ -1,0 +1,30 @@
+1. psql --version
+    psql --host HOSTNAME --port PORT --user USERNAME --dbname DATABASE_NAME
+
+2. pg_dump 
+    pg_dump mydb > dump_file.sql
+    ****info****
+    Create database dump
+
+3. create_db
+    create_db my_db
+    psql --host localhost --dbname my_db --username postgres --file /path/to/dump_file.sql
+    psql --host localhost --port 5432 --dbname my_db --username postgres
+    ****info****
+    Restoration process from dump file
+
+4. pspg
+    A pager designed for PostgreSQL that provides better display and navigation of query results.
+    a. Set pager in session - \setenv PAGER 'pspg --csv'
+    b. permenent session -> echo "\setenv PAGER 'pspg -s 10 --csv' " >> ~/.psqlrc
+
+5. pgbadger
+    A fast log analyzer for PostgreSQL, generating detailed performance reports from log files.
+    
+6. pg_top
+    A top-like monitoring tool for PostgreSQL, showing the most resource-intensive queries and processes.
+7. pg_stat_statements
+    An extension that provides a way to track execution statistics of all SQL statements executed by a server.
+    CREATE EXTENSION pg_stat_statements;
+8. pgcli
+    A modern command-line interface for PostgreSQL with autocompletion and syntax highlighting.

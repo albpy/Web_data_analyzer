@@ -1,0 +1,4 @@
+psql -U postgres -d webdata_analyzer -h localhost -W 
+
+    \d <table_name>  - get column names and info
+     

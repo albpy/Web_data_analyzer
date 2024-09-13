@@ -1,0 +1,13 @@
+{'page_size': 10, 'page_number': 0, 
+'history_date_range': {'fro': '2024-12-01', 'to': '2023-12-13'}, 
+'forecast_date_range': {'fro': '2024-12-13', 'to': '2023-12-30'}, 
+'sales_channel': [], 'product_family': [], 'sub_families': [], 
+'category': [], 'sub_category': [], 'suppliers': [], 'sku': [], 
+'top_items': [], 'store_class': [], 
+'secondary_filter': {'HistoricalYear': [], 'history_dates': [], 
+                    'history_Quarter': [], 'history_month': [], 
+                    'history_week': [], 'history_Day': [], 
+                    'BudgetYear': [], 'BudgetDate': [], 
+                    'Quarter': [], 'month': [], 'week': [], 'Day': [], 
+                    'region': [], 'country': [], 'city': [], 
+                    'Store_Name': [], 'season': [], 'Channel': []}}

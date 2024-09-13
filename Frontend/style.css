@@ -1,0 +1,15 @@
+#check , #rowcheck{
+    color:red;
+    margin-left: 190px;
+}
+#btn{
+    display: none;
+}
+.error{
+    border: 1px solid red;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}

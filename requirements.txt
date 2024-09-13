@@ -1,0 +1,22 @@
+fastapi==0.95.0
+uvicorn[standard]
+websockets==10.4
+
+# modules used in core/middleware/security
+bleach # Bleach is a Python library designed for sanitizing and cleaning HTML, XML, and other markup languages. 
+python.dateutil # The dateutil module provides powerful extensions to the standard datetime module, available in Python.
+
+# main modules
+pandas # pytz, tzdata, numpy
+polars
+sqlalchemy #greenlet
+# before installing psycopg2
+# sudo apt update
+# sudo apt install build-essential libpq-dev python3-dev
+#  the build process for the psycopg2 package is failing because a required header file, pyconfig.h, is missing
+psycopg2-binary
+asyncpg
+pyarrow
+# used by core/database/engine.py
+
+python-decouple # Decouple helps you to organize your settings so that you can change parameters without having to redeploy your app.

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Table using javascript</title>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <!-- <style>
+        /* Style the iframe to be borderless and full width */
+        iframe {
+             width: 50%;      /* Make iframe full width of its container */
+            /* height: 600px;     Set a specific height */
+            border: none;      /* Remove default border */
+            overflow: hidden;  /* Hide scrollbars */
+            display: block;    /* Ensure it behaves as a block element */
+        }
+    </style> -->
+</head>
+<body>
+    <input type="file" id = "fileInput" accept=".csv">
+
+    <button id="submitButton">Submit</button>
+    
+    <select id="dropdownMenu">
+        <option value="ADANIPORTS.csv" selected>ADANIPORTS.csv</option>
+        <option value="BRITANNIA.csv">BRITANNIA.csv</option>
+        <option value="HDFCBANK.csv">HDFCBANK.csv</option>
+        <option value="INFY.csv">INFY.csv</option>
+        <option value="NESTLEIND.csv">NESTLEIND.csv</option>
+        <option value="stock_metadata.csv">stock_metadata.csv</option>
+    </select>
+    <button id="cumulativeButton">Cumulative</button>
+    <!-- Dynamic Calendar Section -->
+    <!-- <iframe id="calenderIframe" src="calender.html"></iframe> -->
+    <div>
+        <label for="startDate">Select Start Date:</label>
+        <input type="date" id="startDate">
+        <label for="endDate">Select End Date:</label>
+        <input type="date" id="endDate">
+        <button id="submitDateRange">Submit Date Range</button>
+    </div>
+    <!-- Table for Displaying CSV Data -->
+     <table id="csvTable" border="1" cellpadding="5">
+        <thead>
+            <tr id="tableHeader"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    
+    <script type = "module" src="colcnt.js"></script>
+</body>
+</html>
