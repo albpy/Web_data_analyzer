@@ -1,7 +1,0 @@
-fastapi[all]
-polars
-pandas
-pydantic
-sqlalchemy
-psycopg2
-asyncpg

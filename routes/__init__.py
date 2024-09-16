@@ -92,14 +92,14 @@ DATA_DICT = {"default" : DATA, "requested" : DATA}
 #**************************
 @otb.get("/get_default")
 async def get_default():
-    DATA_DICT['default'] = pd.read_csv("bmps_data/stock_data/ADANIPORTS.csv")
+    DATA_DICT['default'] = pd.read_csv("_datas/stock_data/ADANIPORTS.csv")
     data_json = f"""{DATA_DICT['default'].to_json(orient='split')}"""
     return JSONResponse(content={"data" : data_json})
 
 @otb.get("/get_requested_file")
 async def get_requested_file(filename : Optional[str] = Query(None)):
     # DATA_DICT['requested'] = 
-    path = "bmps_data/stock_data/"
+    path = "_datas/stock_data/"
     DATA_DICT["requested"] = pd.read_csv(path+filename)
     print(DATA_DICT["requested"].head())
     print(DATA_DICT["requested"].head()["Symbol"].unique())
@@ -168,7 +168,7 @@ async def get_data_ws(websocket: WebSocket, db: Session = Depends(get_db)):
             data_filter = await websocket.receive_json()
             print(data_filter, "SDFD")
             print(DATA_DICT["default"].columns)
-            path = "bmaps_data/stock_data/" + data_filter['company']
+            path = "_datas/stock_data/" + data_filter['company']
             # file_path = 'data.json'
 
             # filters = Filters(**data_filter)

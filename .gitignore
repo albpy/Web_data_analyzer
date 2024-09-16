@@ -1,5 +1,5 @@
 .venv/
 full_datas/
-Bmps_procedure/
-bmps_data/dta
+stored_procedures/
+_datas/dta
 routes/__pycache__
