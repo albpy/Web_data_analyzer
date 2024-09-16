@@ -10,7 +10,7 @@ from core.database import get_db
 from .schemas import Filters, LoginData, Echelons
 from .parameters import OTB
 from .operations import Operations
-from .kpi_analysis import kp_Operations
+from .performance_analysis import kp_Operations
 
 from fastapi.responses import JSONResponse, StreamingResponse
 
